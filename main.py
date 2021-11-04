@@ -61,26 +61,22 @@ ax.axvline(x=450,
 pca = PCA(n_components=450,
           random_state=42)
 
-
-# params = {'C': np.arange(0.01, 1.1, 0.1),
-#           'gamma': np.arange(0.01, 1.1, 0.1)}
-# 
-# grid = GridSearchCV(SVC(), param_grid=params, cv=5)
-# grid.fit(X_scaled, y_train)
-# =============================================================================
-
 """
 Fit a SVC model. 
 """
-params = {'C': np.arange(0.01, 1.1, 0.1),
-          'gamma': np.arange(0.01, 1.1, 0.1)}
-grid = GridSearchCV(SVC(random_state=42), param_grid=params, cv=5)
-grid.fit(pca.fit_transform(X_scaled), y_train)
-
+half = int(np.ceil(X_train.shape[0] * 0.25))
+X_grid = sc.fit_transform(X_train.iloc[0:half, :])
+y_grid = y_train.iloc[0:half, ]
+params = {'C': np.arange(0.01, 1.1, 0.5),
+          'gamma': np.arange(0.01, 1.1, 0.5)}
+grid = GridSearchCV(SVC(random_state=42), param_grid=params, cv=3, n_jobs=-1)
+grid.fit(pca.fit_transform(X_grid), y_grid)
+grid.best_params_
+grid.best_score_
 pipeln = make_pipeline(StandardScaler(), 
                        PCA(n_components=450,
                            random_state=42), 
-                       SVC(C = 0.01, gamma = 0.01, kernel = "linear"))
+                       SVC(C = 1.01, gamma = 0.01, kernel = "linear"))
 
 pipeln.fit(X_train, y_train)
 
