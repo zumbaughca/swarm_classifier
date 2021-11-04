@@ -295,5 +295,111 @@ df.describe()
 
 
 ```python
+# Drop duplicate columns
+df = df.drop_duplicates(keep = 'first')
+```
+
+## Splitting into training/testing sets
+
+
+```python
+X = df.drop(['Swarm_Behaviour'], axis = 1)
+y = df['Swarm_Behaviour']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+```
+
+## Principal Components Analysis
+
+
+```python
+sc = StandardScaler()
+X_scaled = sc.fit_transform(X_train)
+
+pca_comps = np.arange(50, 1050, 50)
+pca_variance = []
+for n in pca_comps:
+    pca = PCA(n_components = n,
+              random_state=42)
+    pca.fit(X_scaled)
+    pca_variance.append(pca.explained_variance_ratio_.sum())
+```
+
+
+```python
+# Plotting the results
+ax = sns.scatterplot(x=pca_comps,
+                y=pca_variance,
+                color="#966FD6")
+ax.set_xlabel("# of Components",
+              fontsize=18)
+ax.set_ylabel("Explained Variance",
+              size=18)
+ax.tick_params(labelsize=16)
+ax.axvline(x=450,
+           color="steelblue",
+           linestyle="dashed")
+```
+
+
+
+
+    <matplotlib.lines.Line2D at 0x7fa1b0cd0520>
+
+
+
+
+    
+![png](output_11_1.png)
+    
+
+
+450 components reduces the dimensionality of the data quite a bit and still explaines most of the variance. From previous testing, it does a bit better than 100 or 200 components.
+
+## Support Vector Classification
+
+
+```python
+pipeln = make_pipeline(StandardScaler(), 
+                       PCA(n_components=450,
+                           random_state=42), 
+                       SVC(C = 0.01, gamma = 0.01, kernel = "linear"))
+
+pipeln.fit(X_train, y_train)
+
+
+predicted = pipeln.predict(X_test)
+```
+
+### Training set metrics
+
+
+```python
+helpers.get_model_metrics(y_train, pipeln.predict(X_train))
+```
+
+    Accuracy: 90.29%
+    F1 score:  0.8584
+    Precision:  0.8799
+    Recall:  0.8379
+
+
+### Test set metrics
+
+
+```python
+helpers.get_model_metrics(y_test, predicted)
+```
+
+    Accuracy: 87.44%
+    F1 score:  0.8127
+    Precision:  0.8354
+    Recall:  0.7913
+
+
+## In progress...
+
+
+```python
 
 ```
