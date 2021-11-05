@@ -62,13 +62,21 @@ pca = PCA(n_components=450,
           random_state=42)
 
 """
-Fit a SVC model. 
+Fit a SVC model. First tune with grid search, then fit on training set.
+The test set is currently predicting at:
+    88.05% accuract
+    0.79 F1 score
+    1.0 precision
+    0.65 Recall
+
+All values close to training.
 """
 half = int(np.ceil(X_train.shape[0] * 0.25))
 X_grid = sc.fit_transform(X_train.iloc[0:half, :])
 y_grid = y_train.iloc[0:half, ]
-params = {'C': np.arange(0.01, 1.1, 0.5),
-          'gamma': np.arange(0.01, 1.1, 0.5)}
+params = {'C': [0.001, 0.01, 0.1, 1, 1.1],
+          'gamma': [0.001, 0.01, 0.1, 1, 1.1],
+          'kernel': ['linear', 'rbf', 'poly']}
 grid = GridSearchCV(SVC(random_state=42), param_grid=params, cv=3, n_jobs=-1)
 grid.fit(pca.fit_transform(X_grid), y_grid)
 grid.best_params_
@@ -76,7 +84,7 @@ grid.best_score_
 pipeln = make_pipeline(StandardScaler(), 
                        PCA(n_components=450,
                            random_state=42), 
-                       SVC(C = 1.01, gamma = 0.01, kernel = "linear"))
+                       SVC(C = 0.01, gamma = 0.001, kernel = "rbf"))
 
 pipeln.fit(X_train, y_train)
 
@@ -90,6 +98,17 @@ helpers.get_model_metrics(y_train, pipeln.predict(X_train))
 """
 Fit a logistic regression model to compare.
 """
+
+logistic_params = {'penalty': ['l1', 'l2', 'elasticnet'],
+                   'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
+
+log_grid = GridSearchCV(LogisticRegression(random_state=42),
+                        param_grid=logistic_params, cv=3, n_jobs=-1)
+log_grid.fit(pca.fit_transform(X_scaled), y_train)
+print(log_grid.best_params_)
+print(log_grid.best_score_)
+
+
 pipe_logistic = make_pipeline(StandardScaler(),
                               PCA(n_components=450,
                                   random_state=42),
