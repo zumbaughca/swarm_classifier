@@ -14,11 +14,12 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.pipeline import make_pipeline
-import sklearn.metrics
+from  sklearn import metrics
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 import helpers
 from xgboost import XGBClassifier
+import joblib
 
 sns.set_style('darkgrid')
 
@@ -64,36 +65,53 @@ pca = PCA(n_components=450,
 """
 Fit a SVC model. First tune with grid search, then fit on training set.
 The test set is currently predicting at:
-    88.05% accuract
-    0.79 F1 score
-    1.0 precision
-    0.65 Recall
+    87% accuract
+    0.87 F1 score
+    0.87 precision
+    0.85 Recall
 
 All values close to training.
 """
-half = int(np.ceil(X_train.shape[0] * 0.25))
-X_grid = sc.fit_transform(X_train.iloc[0:half, :])
-y_grid = y_train.iloc[0:half, ]
-params = {'C': [0.001, 0.01, 0.1, 1, 1.1],
-          'gamma': [0.001, 0.01, 0.1, 1, 1.1],
-          'kernel': ['linear', 'rbf', 'poly']}
-grid = GridSearchCV(SVC(random_state=42), param_grid=params, cv=3, n_jobs=-1)
-grid.fit(pca.fit_transform(X_grid), y_grid)
-grid.best_params_
-grid.best_score_
-pipeln = make_pipeline(StandardScaler(), 
-                       PCA(n_components=450,
-                           random_state=42), 
-                       SVC(C = 0.01, gamma = 0.001, kernel = "rbf"))
 
-pipeln.fit(X_train, y_train)
+def load_model():
+    try:
+        model = joblib.load('svc_model.sav')
+        return model 
+    except:
+        half = int(np.ceil(X_train.shape[0] * 0.25))
+        X_grid = sc.fit_transform(X_train.iloc[0:half, :])
+        y_grid = y_train.iloc[0:half, ]
+        params = {'C': [0.001, 0.01, 0.1, 1, 1.1],
+                  'gamma': [0.001, 0.01, 0.1, 1, 1.1],
+                  'kernel': ['linear', 'rbf', 'poly']}
+        grid = GridSearchCV(SVC(random_state=42), 
+                            param_grid=params, 
+                            cv=3,
+                            n_jobs=-1,
+                            scoring='recall')
+        grid.fit(pca.fit_transform(X_grid), y_grid)
+        grid.best_params_
+        grid.best_score_
+        pipeln = make_pipeline(StandardScaler(), 
+                               PCA(n_components=450,
+                                   random_state=42), 
+                               SVC(C = 0.001, gamma = 0.001, kernel = "linear"))
+
+        pipeln.fit(X_train, y_train)
 
 
-predicted = pipeln.predict(X_test)
-# Test set
-helpers.get_model_metrics(y_test, predicted)
-# Train set
-helpers.get_model_metrics(y_train, pipeln.predict(X_train))
+        predicted = pipeln.predict(X_test)
+        # Test set
+        helpers.get_model_metrics(y_test, predicted)
+        # Train set
+        helpers.get_model_metrics(y_train, pipeln.predict(X_train))
+        print(metrics.classification_report(y_test, predicted))
+        # Save model
+        joblib.dump(pipeln, filename='svc_model.sav')
+        
+        return pipeln
+    finally:
+        print("Model loaded or fit successfully")
 
 """
 Fit a logistic regression model to compare.
